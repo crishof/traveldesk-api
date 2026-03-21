@@ -1,0 +1,45 @@
+services:
+  database:
+    image: postgres:16
+    container_name: traveldesk-db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DOCKER_DB}
+      POSTGRES_USER: ${POSTGRES_DOCKER_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DOCKER_PASSWORD}
+    ports:
+      - "5467:5432"
+    volumes:
+      - pg_dev_data:/var/lib/postgresql/data
+    networks:
+      - travel-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_DOCKER_USER} -d ${POSTGRES_DOCKER_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+#  spring:
+#    build: ./
+#    depends_on:
+#      database:
+#        condition: service_healthy
+#    environment:
+#      SPRING_PROFILES_ACTIVE: prod
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${POSTGRES_DOCKER_DB}
+#      SPRING_DATASOURCE_USERNAME: ${POSTGRES_DOCKER_USER}
+#      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_DOCKER_PASSWORD}
+#      BASE64_SECRET_KEY: ${BASE64_SECRET_KEY}
+#      PORT: 8090
+#    ports:
+#      - "8090:8090"
+#    networks:
+#      - travel-net
+
+volumes:
+  pg_dev_data:
+
+networks:
+  travel-net:
+    driver: bridge
