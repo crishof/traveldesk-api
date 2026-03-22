@@ -9,7 +9,6 @@ import lombok.Setter;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -18,8 +17,13 @@ import java.util.UUID;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "tbl_users")
-public class User implements Serializable {
+@Table(
+        name = "tbl_suppliers",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_supplier_agency_email", columnNames = {"agency_id", "email"})
+        }
+)
+public class Supplier implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -28,26 +32,25 @@ public class User implements Serializable {
     @GeneratedValue
     private UUID id;
 
-    @Column(nullable = false, length = 120)
-    private String fullName;
-
-    @Column(nullable = false, unique = true, length = 150)
-    private String email;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private Role role;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private UserStatus status;
-
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "agency_id", nullable = false)
     private Agency agency;
 
-    @Column(nullable = false, precision = 5, scale = 2)
-    private BigDecimal commissionPercentage;
+    @Column(nullable = false, length = 120)
+    private String name;
+
+    @Column(nullable = false, length = 150)
+    private String email;
+
+    @Column(nullable = false, length = 10)
+    private String currency;
+
+    @Column(nullable = false, length = 30)
+    private String phone;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private SupplierType type;
 
     @Column(nullable = false)
     private Instant createdAt;
@@ -60,9 +63,6 @@ public class User implements Serializable {
         Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
-        if (commissionPercentage == null) {
-            commissionPercentage = BigDecimal.ZERO;
-        }
     }
 
     @PreUpdate
