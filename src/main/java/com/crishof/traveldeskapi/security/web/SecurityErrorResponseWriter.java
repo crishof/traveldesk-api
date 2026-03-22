@@ -5,7 +5,6 @@ import com.crishof.traveldeskapi.exception.ApiErrorFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -14,7 +13,6 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class SecurityErrorResponseWriter {
 
     private final ApiErrorFactory apiErrorFactory;
@@ -25,7 +23,6 @@ public class SecurityErrorResponseWriter {
                       String error,
                       String message) throws IOException {
 
-        log.debug("Writing security error response for status {} and error {}", status, error);
         ApiError apiError = apiErrorFactory.build(status, error, message, request);
 
         response.setStatus(status.value());
@@ -35,7 +32,6 @@ public class SecurityErrorResponseWriter {
     }
 
     private String toJson(ApiError error) {
-        log.debug("Converting ApiError to JSON: {}", error);
         return """
                 {
                   "timestamp":"%s",
@@ -49,7 +45,6 @@ public class SecurityErrorResponseWriter {
     }
 
     private String escape(String value) {
-        log.debug("Escaping value: {}", value);
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
