@@ -102,7 +102,7 @@ public class EmailServiceImpl implements EmailService {
         message.setText("""
                 Your verification code is:
                 %s
-                
+
                 This code expires in %d minute%s.
                 If you did not create this account, you can ignore this email.
                 """.formatted(code, emailVerificationCodeTtlMinutes, emailVerificationCodeTtlMinutes == 1 ? "" : "s"));
@@ -116,10 +116,10 @@ public class EmailServiceImpl implements EmailService {
         message.setSubject("Password Reset");
         message.setText("""
                 We received a request to reset your password.
-                
+
                 Use the link below to set a new password:
                 %s
-                
+
                 This link expires in 30 minutes.
                 If you did not request this, you can ignore this email.
                 """.formatted(resetLink));
@@ -133,10 +133,10 @@ public class EmailServiceImpl implements EmailService {
         message.setSubject("You're invited");
         message.setText("""
                 You have been invited to create your account.
-                
+
                 Use the link below to accept the invitation:
                 %s
-                
+
                 This link expires soon. If you were not expecting this invitation, you can ignore this email.
                 """.formatted(inviteLink));
         return message;
