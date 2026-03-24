@@ -46,6 +46,12 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.CONFLICT, ERROR_CONFLICT, ex, request);
     }
 
+    @ExceptionHandler({ConflictException.class, AgencyAlreadyExistException.class})
+    public ResponseEntity<ApiError> handleConflict(RuntimeException ex, HttpServletRequest request) {
+        log.warn("Conflict: {}", ex.getMessage());
+        return respond(HttpStatus.CONFLICT, ERROR_CONFLICT, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(AuthenticationFailedException.class)
     public ResponseEntity<ApiError> handleAuthenticationFailed(AuthenticationFailedException ex, HttpServletRequest request) {
         log.warn("Authentication failed: {}", ex.getMessage());
