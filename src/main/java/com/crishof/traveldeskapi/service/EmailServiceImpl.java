@@ -5,12 +5,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
+    private final WebClient.Builder webClientBuilder;
 
     @Value("${app.mail.enabled:false}")
     private boolean mailEnabled;
@@ -34,6 +40,18 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.email-verification.code-ttl-minutes:10}")
     private long emailVerificationCodeTtlMinutes;
 
+    @Value("${app.mail.provider:smtp}")
+    private String mailProvider;
+
+    @Value("${app.mail.brevo.api-url:https://api.brevo.com/v3}")
+    private String brevoApiBaseUrl;
+
+    @Value("${app.mail.brevo.api-key:${BREVO_API_KEY:}}")
+    private String brevoApiKey;
+
+    @Value("${app.mail.brevo.timeout-seconds:15}")
+    private long brevoTimeoutSeconds;
+
     @Override
     public void sendPasswordResetEmail(String recipientEmail, String token) {
         String resetLink = buildResetLink(token);
@@ -43,13 +61,7 @@ public class EmailServiceImpl implements EmailService {
             return;
         }
 
-        try {
-            SimpleMailMessage message = getResetPasswordMessage(recipientEmail, resetLink);
-
-            mailSender.send(message);
-        } catch (Exception ex) {
-            throw new ExternalServiceException("Failed to send password reset email");
-        }
+        sendEmail(recipientEmail, "Password Reset", getResetPasswordBody(resetLink), "password reset email");
     }
 
     @Override
@@ -59,12 +71,7 @@ public class EmailServiceImpl implements EmailService {
             return;
         }
 
-        try {
-            SimpleMailMessage message = getVerificationMessage(recipientEmail, code);
-            mailSender.send(message);
-        } catch (Exception ex) {
-            throw new ExternalServiceException("Failed to send email verification code");
-        }
+        sendEmail(recipientEmail, "Email Verification Code", getVerificationBody(code), "email verification code");
     }
 
     @Override
@@ -76,11 +83,22 @@ public class EmailServiceImpl implements EmailService {
             return;
         }
 
+        sendEmail(recipientEmail, "You're invited", getInvitationBody(inviteLink), "invitation email");
+    }
+
+    private void sendEmail(String recipientEmail, String subject, String body, String emailTypeLabel) {
         try {
-            SimpleMailMessage message = getInvitationMessage(recipientEmail, inviteLink);
-            mailSender.send(message);
+            MailProvider provider = MailProvider.from(mailProvider);
+            if (provider == MailProvider.BREVO_API) {
+                sendWithBrevoApi(recipientEmail, subject, body);
+                return;
+            }
+
+            mailSender.send(buildSmtpMessage(recipientEmail, subject, body));
+        } catch (ExternalServiceException ex) {
+            throw ex;
         } catch (Exception ex) {
-            throw new ExternalServiceException("Failed to send invitation email");
+            throw new ExternalServiceException("Failed to send " + emailTypeLabel, ex);
         }
     }
 
@@ -94,51 +112,102 @@ public class EmailServiceImpl implements EmailService {
         return acceptInviteBaseUrl + "?token=" + encodedToken;
     }
 
-    private @NonNull SimpleMailMessage getVerificationMessage(String recipientEmail, String code) {
+    private @NonNull SimpleMailMessage buildSmtpMessage(String recipientEmail, String subject, String body) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);
         message.setTo(recipientEmail);
-        message.setSubject("Email Verification Code");
-        message.setText("""
+        message.setSubject(subject);
+        message.setText(body);
+        return message;
+    }
+
+    private String getVerificationBody(String code) {
+        return """
                 Your verification code is:
                 %s
-                
+
                 This code expires in %d minute%s.
                 If you did not create this account, you can ignore this email.
-                """.formatted(code, emailVerificationCodeTtlMinutes, emailVerificationCodeTtlMinutes == 1 ? "" : "s"));
-        return message;
+                """.formatted(code, emailVerificationCodeTtlMinutes, emailVerificationCodeTtlMinutes == 1 ? "" : "s");
     }
 
-    private @NonNull SimpleMailMessage getResetPasswordMessage(String recipientEmail, String resetLink) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(recipientEmail);
-        message.setSubject("Password Reset");
-        message.setText("""
+    private String getResetPasswordBody(String resetLink) {
+        return """
                 We received a request to reset your password.
-                
+
                 Use the link below to set a new password:
                 %s
-                
+
                 This link expires in 30 minutes.
                 If you did not request this, you can ignore this email.
-                """.formatted(resetLink));
-        return message;
+                """.formatted(resetLink);
     }
 
-    private @NonNull SimpleMailMessage getInvitationMessage(String recipientEmail, String inviteLink) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(recipientEmail);
-        message.setSubject("You're invited");
-        message.setText("""
+    private String getInvitationBody(String inviteLink) {
+        return """
                 You have been invited to create your account.
-                
+
                 Use the link below to accept the invitation:
                 %s
-                
+
                 This link expires soon. If you were not expecting this invitation, you can ignore this email.
-                """.formatted(inviteLink));
-        return message;
+                """.formatted(inviteLink);
+    }
+
+    private void sendWithBrevoApi(String recipientEmail, String subject, String body) {
+        if (brevoApiKey == null || brevoApiKey.isBlank()) {
+            throw new ExternalServiceException("Brevo API key is missing. Set BREVO_API_KEY or app.mail.brevo.api-key");
+        }
+
+        BrevoEmailRequest request = new BrevoEmailRequest(
+                new BrevoSender(fromAddress),
+                List.of(new BrevoRecipient(recipientEmail)),
+                subject,
+                body
+        );
+
+        webClientBuilder
+                .baseUrl(brevoApiBaseUrl)
+                .defaultHeader("api-key", brevoApiKey)
+                .build()
+                .post()
+                .uri("/smtp/email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .retrieve()
+                .onStatus(
+                        status -> status.isError(),
+                        response -> response.bodyToMono(String.class)
+                                .defaultIfEmpty("no body")
+                                .map(errorBody -> new ExternalServiceException("Brevo API email send failed: " + errorBody))
+                )
+                .toBodilessEntity()
+                .block(Duration.ofSeconds(brevoTimeoutSeconds));
+    }
+
+    private enum MailProvider {
+        SMTP,
+        BREVO_API;
+
+        private static MailProvider from(String rawValue) {
+            if (rawValue == null) {
+                return SMTP;
+            }
+
+            String normalized = rawValue.trim().toLowerCase(Locale.ROOT);
+            return switch (normalized) {
+                case "brevo-api", "brevo_api", "brevoapi", "brevo" -> BREVO_API;
+                default -> SMTP;
+            };
+        }
+    }
+
+    private record BrevoEmailRequest(BrevoSender sender, List<BrevoRecipient> to, String subject, String textContent) {
+    }
+
+    private record BrevoSender(String email) {
+    }
+
+    private record BrevoRecipient(String email) {
     }
 }

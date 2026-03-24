@@ -78,7 +78,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ExternalServiceException.class)
     public ResponseEntity<ApiError> handleExternalService(ExternalServiceException ex, HttpServletRequest request) {
-        log.error("External service error: {}", ex.getMessage());
+        log.error("External service error: {}", ex.getMessage(), ex);
         return respond(HttpStatus.BAD_GATEWAY, "External Service Error", ex, request);
     }
 
