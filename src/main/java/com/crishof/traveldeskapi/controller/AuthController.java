@@ -47,6 +47,18 @@ public class AuthController {
     }
 
 //  ===========
+//   INVITE INFO
+//  ===========
+    @Operation(summary = "Read invitation info", description = "Returns public invitation details required before accepting the invite")
+    @ApiResponse(responseCode = "200", description = "Invitation info retrieved successfully")
+    @ApiResponse(responseCode = "401", description = "Invalid or expired invitation token")
+    @GetMapping("/invite-info/{token}")
+    public ResponseEntity<InviteInfoResponse> getInviteInfo(@PathVariable String token) {
+        log.info("Invite info request received");
+        return ResponseEntity.ok(authService.getInviteInfo(token));
+    }
+
+//  ===========
 //   ACCEPT INVITE
 //  ===========
     @Operation(summary = "Accept a team invitation")
@@ -54,7 +66,7 @@ public class AuthController {
     @ApiResponse(responseCode = "400", description = "Invalid request")
     @PostMapping("/accept-invite")
     public ResponseEntity<AuthResponse> acceptInvite(@Valid @RequestBody AcceptInviteRequest request) {
-        log.info("Accept invite request received for email={}", request.email());
+        log.info("Accept invite request received");
         return ResponseEntity.ok(authService.acceptInvite(request));
     }
 

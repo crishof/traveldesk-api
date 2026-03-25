@@ -41,6 +41,11 @@ Define en prod URLs publicas (no `localhost`):
 - `RESET_PASSWORD_BASE_URL=https://traveldesk-pi.vercel.app/reset-password`
 - `ACCEPT_INVITE_BASE_URL=https://traveldesk-pi.vercel.app/accept-invite`
 
+En desarrollo local, si no defines variables de entorno, el backend usara:
+
+- `http://localhost:4200/reset-password`
+- `http://localhost:4200/accept-invite`
+
 ### 4) Verificacion local rapida
 
 ```bash

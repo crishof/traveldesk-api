@@ -16,6 +16,8 @@ public interface AuthService {
 
     AuthResponse verifyEmail(VerifyEmailRequest request);
 
+    InviteInfoResponse getInviteInfo(String token);
+
     AuthResponse acceptInvite(AcceptInviteRequest request);
 
     void forgotPassword(String email);
@@ -28,5 +30,5 @@ public interface AuthService {
 
     AuthMeResponse me(SecurityUser securityUser);
 
-    InvitationResponse createInvitation(CreateInvitationRequest request);
+    InvitationResponse createInvitation(UUID agencyId, UUID invitedByUserId, CreateInvitationRequest request);
 }

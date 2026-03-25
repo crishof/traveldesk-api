@@ -199,22 +199,31 @@ public class AuthServiceImpl implements AuthService {
     }
 
 //  ===========
+//    INVITE INFO
+//  ===========
+    @Override
+    public InviteInfoResponse getInviteInfo(String token) {
+        InvitationToken invitationToken = getValidInvitationTokenOrThrow(token);
+        Agency agency = getInvitationAgencyOrThrow(invitationToken);
+
+        return new InviteInfoResponse(
+                invitationToken.getEmail(),
+                invitationToken.getRole().name(),
+                agency.getId(),
+                agency.getName(),
+                invitationToken.getExpiresAt(),
+                AcceptInviteRequest.PASSWORD_REQUIREMENTS
+        );
+    }
+
+//  ===========
 //    ACCOUNT VERIFICATION
 //  ===========
     @Override
     public AuthResponse acceptInvite(AcceptInviteRequest request) {
-        String normalizedEmail = normalizeEmail(request.email());
-
-        InvitationToken invitationToken = invitationTokenRepository.findByToken(request.token())
-                .orElseThrow(() -> new InvalidTokenException("Invalid or expired invitation token"));
-
-        if (!invitationToken.isValid()) {
-            throw new InvalidTokenException("Invalid or expired invitation token");
-        }
-
-        if (!invitationToken.getEmail().equalsIgnoreCase(normalizedEmail)) {
-            throw new BusinessException("Invitation email does not match the provided email");
-        }
+        InvitationToken invitationToken = getValidInvitationTokenOrThrow(request.token());
+        Agency agency = getInvitationAgencyOrThrow(invitationToken);
+        String normalizedEmail = invitationToken.getEmail();
 
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new EmailAlreadyExistException("Email " + normalizedEmail + " is already in use");
@@ -225,6 +234,7 @@ public class AuthServiceImpl implements AuthService {
         user.setEmail(normalizedEmail);
         user.setRole(invitationToken.getRole());
         user.setStatus(UserStatus.ACTIVE);
+        user.setAgency(agency);
 
         User savedUser = userRepository.save(user);
 
@@ -350,8 +360,11 @@ public class AuthServiceImpl implements AuthService {
 //  CREATE INVITATION
 //  ===========
     @Override
-    public InvitationResponse createInvitation(CreateInvitationRequest request) {
+    public InvitationResponse createInvitation(UUID agencyId, UUID invitedByUserId, CreateInvitationRequest request) {
         String normalizedEmail = normalizeEmail(request.email());
+        Agency agency = agencyRepository.findById(agencyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agency not found"));
+        User invitedBy = getUserByIdAndAgencyOrThrow(invitedByUserId, agencyId);
 
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new EmailAlreadyExistException("Email " + normalizedEmail + " is already in use");
@@ -368,6 +381,8 @@ public class AuthServiceImpl implements AuthService {
         InvitationToken invitationToken = InvitationToken.builder()
                 .token(UUID.randomUUID().toString())
                 .email(normalizedEmail)
+                .agency(agency)
+                .invitedBy(invitedBy)
                 .role(request.role())
                 .used(false)
                 .expiresAt(Instant.now().plus(INVITATION_DAYS, ChronoUnit.DAYS))
@@ -449,9 +464,33 @@ public class AuthServiceImpl implements AuthService {
                 });
     }
 
+    private InvitationToken getValidInvitationTokenOrThrow(String rawToken) {
+        InvitationToken invitationToken = invitationTokenRepository.findByToken(rawToken == null ? "" : rawToken.trim())
+                .orElseThrow(() -> new InvalidTokenException("Invalid or expired invitation token"));
+
+        if (!invitationToken.isValid()) {
+            throw new InvalidTokenException("Invalid or expired invitation token");
+        }
+
+        return invitationToken;
+    }
+
+    private Agency getInvitationAgencyOrThrow(InvitationToken invitationToken) {
+        if (invitationToken.getAgency() == null) {
+            throw new InvalidTokenException("Invitation token is missing agency context. Request a new invitation");
+        }
+
+        return invitationToken.getAgency();
+    }
+
     private User getUserByEmailOrThrow(String email) {
         return userRepository.findByEmailIgnoreCase(email).orElseThrow(
                 () -> new ResourceNotFoundException("User not found with email: " + email));
+    }
+
+    private User getUserByIdAndAgencyOrThrow(UUID userId, UUID agencyId) {
+        return userRepository.findByIdAndAgencyId(userId, agencyId).orElseThrow(
+                () -> new ResourceNotFoundException("User not found for the provided agency"));
     }
 
     private SecurityAccount getSecurityAccountByUserOrThrow(User user) {

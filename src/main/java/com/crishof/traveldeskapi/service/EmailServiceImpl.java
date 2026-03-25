@@ -31,10 +31,10 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.mail.from:no-reply@mail.local}")
     private String fromAddress;
 
-    @Value("${app.reset-password.base-url:http://localhost:5173/reset-password}")
+    @Value("${app.reset-password.base-url}")
     private String resetPasswordBaseUrl;
 
-    @Value("${app.accept-invite.base-url:http://localhost:5173/accept-invite}")
+    @Value("${app.accept-invite.base-url}")
     private String acceptInviteBaseUrl;
 
     @Value("${app.email-verification.code-ttl-minutes:10}")

@@ -37,7 +37,7 @@ public class SupplierController {
         log.info("Get suppliers request received for userId={}", securityUser.getId());
         return ResponseEntity.ok(supplierService.getAll(securityUser.getAgencyId()));
     }
-    
+
     //  ===============
     //  CREATE PROVIDER
     //  ===============

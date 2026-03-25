@@ -49,6 +49,7 @@ public class SecurityConfig {
             "/api/v1/auth/verify-email",
             "/api/v1/auth/forgot-password",
             "/api/v1/auth/reset-password",
+            "/api/v1/auth/invite-info/**",
             "/api/v1/auth/accept-invite",
             "/api/v1/auth/logout");
 
