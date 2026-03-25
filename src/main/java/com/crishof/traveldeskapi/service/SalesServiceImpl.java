@@ -43,7 +43,6 @@ public class SalesServiceImpl implements SalesService {
 
         Customer customer = new Customer();
         if (request.customerId() != null) {
-
             customer = getCustomerOrThrow(agencyId, request.customerId());
         } else {
             customer.setAgency(agency);

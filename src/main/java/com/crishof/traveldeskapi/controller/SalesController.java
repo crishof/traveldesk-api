@@ -70,7 +70,7 @@ public class SalesController {
         return ResponseEntity.ok(salesService.update(securityUser.getAgencyId(), id, request));
     }
 
-    
+    //  ===============
     //  GET SALE BY ID
     //  ===============
 

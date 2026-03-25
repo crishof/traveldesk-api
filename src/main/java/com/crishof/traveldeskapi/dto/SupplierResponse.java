@@ -7,6 +7,7 @@ public record SupplierResponse(
         String name,
         String email,
         String phone,
+        String currency,
         String serviceType
 ) {
 }
