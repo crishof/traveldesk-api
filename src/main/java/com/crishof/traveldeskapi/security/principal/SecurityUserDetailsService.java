@@ -1,6 +1,6 @@
 package com.crishof.traveldeskapi.security.principal;
 
-import com.crishof.traveldeskapi.model.SecurityAccount;
+import com.crishof.traveldeskapi.model.security.SecurityAccount;
 import com.crishof.traveldeskapi.model.User;
 import com.crishof.traveldeskapi.repository.SecurityAccountRepository;
 import lombok.RequiredArgsConstructor;

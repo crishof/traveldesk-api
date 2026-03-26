@@ -1,6 +1,6 @@
 package com.crishof.traveldeskapi.repository;
 
-import com.crishof.traveldeskapi.model.PasswordResetToken;
+import com.crishof.traveldeskapi.model.security.PasswordResetToken;
 import com.crishof.traveldeskapi.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

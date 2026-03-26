@@ -51,7 +51,8 @@ public class SecurityConfig {
             "/api/v1/auth/reset-password",
             "/api/v1/auth/invite-info/**",
             "/api/v1/auth/accept-invite",
-            "/api/v1/auth/logout");
+            "/api/v1/auth/logout",
+            "/api/v1/auth/resend-verification");
 
     private static final List<String> ALLOWED_METHODS = List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS");
     private static final List<String> EXPOSED_HEADERS = List.of("Authorization");

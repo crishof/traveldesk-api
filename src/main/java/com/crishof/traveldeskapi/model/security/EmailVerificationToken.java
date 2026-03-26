@@ -1,5 +1,6 @@
-package com.crishof.traveldeskapi.model;
+package com.crishof.traveldeskapi.model.security;
 
+import com.crishof.traveldeskapi.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 
