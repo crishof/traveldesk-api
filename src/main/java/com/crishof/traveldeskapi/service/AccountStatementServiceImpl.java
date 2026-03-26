@@ -16,10 +16,12 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -50,10 +52,10 @@ public class AccountStatementServiceImpl implements AccountStatementService {
 
             AccountMovementDTO movement = new AccountMovementDTO();
             movement.setId(sale.getId());
-            movement.setDate(sale.getSaleDate().atZone(ZoneId.systemDefault()).toLocalDate());
+            movement.setDate(resolveSaleMovementDate(sale));
             movement.setType(MovementType.SALE_FEE);
             movement.setSaleId(sale.getId());
-            movement.setConcept("Comision venta " + sale.getCustomer().getFullName() + " - " + sale.getDestination());
+            movement.setConcept(resolveSaleConcept(sale));
             movement.setAmount(commissionAmount);
             movement.setCurrency(currency);
 
@@ -65,7 +67,7 @@ public class AccountStatementServiceImpl implements AccountStatementService {
         for (AccountPayment payment : payments) {
             AccountMovementDTO movement = new AccountMovementDTO();
             movement.setId(payment.getId());
-            movement.setDate(payment.getDate());
+            movement.setDate(resolvePaymentDate(payment));
             movement.setType(MovementType.MANUAL_PAYMENT);
             movement.setConcept(resolvePaymentDescription(payment));
             movement.setAmount(payment.getAmount().negate());
@@ -74,7 +76,11 @@ public class AccountStatementServiceImpl implements AccountStatementService {
             movements.add(movement);
         }
 
-        movements.sort(Comparator.comparing(AccountMovementDTO::getDate));
+        movements.sort(
+                Comparator
+                        .comparing(AccountMovementDTO::getDate, Comparator.nullsLast(LocalDate::compareTo))
+                        .thenComparing(movement -> String.valueOf(movement.getId()), Comparator.nullsLast(String::compareTo))
+        );
 
         BigDecimal balance = movements.stream()
                 .map(AccountMovementDTO::getAmount)
@@ -88,6 +94,7 @@ public class AccountStatementServiceImpl implements AccountStatementService {
     }
 
     @Override
+    @Transactional
     public AccountStatementDTO addPayment(UUID userId, AccountPaymentRequest request) {
         validateUserId(userId);
         getUserOrThrow(userId);
@@ -103,7 +110,42 @@ public class AccountStatementServiceImpl implements AccountStatementService {
         return getStatement(userId, request.currency());
     }
 
+    @Override
+    @Transactional
+    public AccountStatementDTO updatePayment(UUID userId, UUID paymentId, AccountPaymentRequest request) {
+        validateUserId(userId);
+        validatePaymentId(paymentId);
+        getUserOrThrow(userId);
+
+        AccountPayment payment = getPaymentOrThrow(paymentId, userId);
+        payment.setDate(request.date());
+        payment.setAmount(request.amount().setScale(2, RoundingMode.HALF_UP));
+        payment.setCurrency(request.currency());
+        payment.setDescription(normalizeDescription(request.description()));
+
+        accountPaymentRepository.save(payment);
+        return getStatement(userId, request.currency());
+    }
+
+    @Override
+    @Transactional
+    public AccountStatementDTO deletePayment(UUID userId, UUID paymentId) {
+        validateUserId(userId);
+        validatePaymentId(paymentId);
+        getUserOrThrow(userId);
+
+        AccountPayment payment = getPaymentOrThrow(paymentId, userId);
+        Currency paymentCurrency = payment.getCurrency();
+
+        accountPaymentRepository.delete(payment);
+        return getStatement(userId, paymentCurrency);
+    }
+
     private BigDecimal calculateCommissionAmount(Sale sale, Currency currency) {
+        if (sale == null || sale.getCreatedBy() == null) {
+            return BigDecimal.ZERO;
+        }
+
         BigDecimal commissionPercentage = sale.getCommissionPercentage() != null
             ? safeAmount(sale.getCommissionPercentage())
             : safeAmount(sale.getCreatedBy().getCommissionPercentage());
@@ -111,10 +153,14 @@ public class AccountStatementServiceImpl implements AccountStatementService {
             return BigDecimal.ZERO;
         }
 
-        BigDecimal totalPaymentsReceived = sale.getPayments().stream()
+        BigDecimal totalPaymentsReceived = safePayments(sale).stream()
             .map(Payment::getConvertedAmount)
             .map(this::safeAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (sale.getAgency() == null || sale.getCustomer() == null || sale.getDepartureDate() == null) {
+            return BigDecimal.ZERO;
+        }
 
         BigDecimal totalBookings = bookingRepository
                 .findAllByAgencyIdAndCustomerIdAndCreatedByIdAndDepartureDateAndStatus(
@@ -151,6 +197,29 @@ public class AccountStatementServiceImpl implements AccountStatementService {
         return "Cobro de comisiones";
     }
 
+    private LocalDate resolveSaleMovementDate(Sale sale) {
+        if (sale.getSaleDate() == null) {
+            return LocalDate.now();
+        }
+        return sale.getSaleDate().atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    private String resolveSaleConcept(Sale sale) {
+        String customerName = sale.getCustomer() != null
+                ? Objects.toString(sale.getCustomer().getFullName(), "Cliente sin nombre")
+                : "Cliente sin nombre";
+        String destination = Objects.toString(sale.getDestination(), "Sin destino");
+        return "Comision venta " + customerName + " - " + destination;
+    }
+
+    private LocalDate resolvePaymentDate(AccountPayment payment) {
+        return payment.getDate() == null ? LocalDate.now() : payment.getDate();
+    }
+
+    private List<Payment> safePayments(Sale sale) {
+        return sale.getPayments() == null ? List.of() : sale.getPayments();
+    }
+
     private String normalizeDescription(String description) {
         if (description == null || description.isBlank()) {
             return "Cobro de comisiones";
@@ -163,9 +232,20 @@ public class AccountStatementServiceImpl implements AccountStatementService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
     }
 
+    private AccountPayment getPaymentOrThrow(UUID paymentId, UUID userId) {
+        return accountPaymentRepository.findByIdAndUserId(paymentId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId));
+    }
+
     private void validateUserId(UUID userId) {
         if (userId == null) {
             throw new InvalidRequestException("User id is required");
+        }
+    }
+
+    private void validatePaymentId(UUID paymentId) {
+        if (paymentId == null) {
+            throw new InvalidRequestException("Payment id is required");
         }
     }
 }
