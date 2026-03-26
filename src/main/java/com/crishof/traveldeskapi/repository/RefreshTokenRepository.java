@@ -1,6 +1,6 @@
 package com.crishof.traveldeskapi.repository;
 
-import com.crishof.traveldeskapi.model.RefreshToken;
+import com.crishof.traveldeskapi.model.security.RefreshToken;
 import com.crishof.traveldeskapi.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 

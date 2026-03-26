@@ -1,7 +1,7 @@
 package com.crishof.traveldeskapi.security.principal;
 
 import com.crishof.traveldeskapi.model.Role;
-import com.crishof.traveldeskapi.model.SecurityAccount;
+import com.crishof.traveldeskapi.model.security.SecurityAccount;
 import com.crishof.traveldeskapi.model.User;
 import com.crishof.traveldeskapi.model.UserStatus;
 import lombok.Getter;

@@ -1,8 +1,6 @@
 package com.crishof.traveldeskapi.model.agency;
 
 import com.crishof.traveldeskapi.model.*;
-import com.crishof.traveldeskapi.model.CommissionType;
-import com.crishof.traveldeskapi.model.ThemeMode;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -5,7 +5,7 @@ import com.crishof.traveldeskapi.exception.ConflictException;
 import com.crishof.traveldeskapi.exception.InvalidRequestException;
 import com.crishof.traveldeskapi.exception.ResourceNotFoundException;
 import com.crishof.traveldeskapi.model.agency.Agency;
-import com.crishof.traveldeskapi.model.CommissionType;
+import com.crishof.traveldeskapi.model.agency.CommissionType;
 import com.crishof.traveldeskapi.model.User;
 import com.crishof.traveldeskapi.repository.AgencyRepository;
 import com.crishof.traveldeskapi.repository.UserRepository;

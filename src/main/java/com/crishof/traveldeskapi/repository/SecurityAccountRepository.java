@@ -1,6 +1,6 @@
 package com.crishof.traveldeskapi.repository;
 
-import com.crishof.traveldeskapi.model.SecurityAccount;
+import com.crishof.traveldeskapi.model.security.SecurityAccount;
 import com.crishof.traveldeskapi.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 

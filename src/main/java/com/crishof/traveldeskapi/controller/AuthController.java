@@ -128,6 +128,20 @@ public class AuthController {
     }
 
 //  ===========
+//    RESEND VERIFICATION CODE
+//  ===========
+    @Operation(summary = "Resend email verification code", description = "Sends a new verification code to the given email if the account is pending verification")
+    @ApiResponse(responseCode = "200", description = "Verification code sent")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "409", description = "Email already verified")
+    @PostMapping("/resend-verification")
+    public ResponseEntity<MessageResponse> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        log.info("Resend verification request received for email={}", request.email());
+        authService.resendVerificationCode(request.email());
+        return ResponseEntity.ok(new MessageResponse("Verification code sent to " + request.email()));
+    }
+
+//  ===========
 //    FORGOT PASSWORD
 //  ===========
     @Operation(summary = "Forgot password", description = "Sends password reset link to user email")

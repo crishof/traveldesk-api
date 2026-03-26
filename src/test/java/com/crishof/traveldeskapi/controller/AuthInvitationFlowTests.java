@@ -2,9 +2,9 @@ package com.crishof.traveldeskapi.controller;
 
 import com.crishof.traveldeskapi.dto.AcceptInviteRequest;
 import com.crishof.traveldeskapi.model.InvitationToken;
-import com.crishof.traveldeskapi.model.RefreshToken;
+import com.crishof.traveldeskapi.model.security.RefreshToken;
 import com.crishof.traveldeskapi.model.Role;
-import com.crishof.traveldeskapi.model.SecurityAccount;
+import com.crishof.traveldeskapi.model.security.SecurityAccount;
 import com.crishof.traveldeskapi.model.User;
 import com.crishof.traveldeskapi.model.UserStatus;
 import com.crishof.traveldeskapi.model.agency.Agency;

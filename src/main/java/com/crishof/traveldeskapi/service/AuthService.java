@@ -31,4 +31,6 @@ public interface AuthService {
     AuthMeResponse me(SecurityUser securityUser);
 
     InvitationResponse createInvitation(UUID agencyId, UUID invitedByUserId, CreateInvitationRequest request);
+
+    void resendVerificationCode(String email);
 }

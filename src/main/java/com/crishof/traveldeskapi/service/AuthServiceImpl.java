@@ -4,11 +4,11 @@ import com.crishof.traveldeskapi.dto.*;
 import com.crishof.traveldeskapi.exception.*;
 import com.crishof.traveldeskapi.model.*;
 import com.crishof.traveldeskapi.model.agency.Agency;
-import com.crishof.traveldeskapi.model.EmailVerificationToken;
 import com.crishof.traveldeskapi.model.InvitationToken;
-import com.crishof.traveldeskapi.model.PasswordResetToken;
-import com.crishof.traveldeskapi.model.RefreshToken;
-import com.crishof.traveldeskapi.model.SecurityAccount;
+import com.crishof.traveldeskapi.model.security.EmailVerificationToken;
+import com.crishof.traveldeskapi.model.security.PasswordResetToken;
+import com.crishof.traveldeskapi.model.security.RefreshToken;
+import com.crishof.traveldeskapi.model.security.SecurityAccount;
 import com.crishof.traveldeskapi.repository.*;
 import com.crishof.traveldeskapi.security.jwt.JwtService;
 import com.crishof.traveldeskapi.security.principal.SecurityUser;
@@ -401,6 +401,25 @@ public class AuthServiceImpl implements AuthService {
     }
 
 //  ===========
+//  RESEND VERIFICATION CODE
+//  ===========
+    @Override
+    public void resendVerificationCode(String email) {
+        String normalizedEmail = normalizeEmail(email);
+
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail).orElseThrow(
+                () -> new ResourceNotFoundException("User not found"));
+
+        SecurityAccount account = getSecurityAccountByUserOrThrow(user);
+
+        if (account.isEmailVerified() || user.getStatus() == UserStatus.ACTIVE) {
+            throw new BusinessException("Email is already verified");
+        }
+
+        issueEmailVerificationCode(user);
+    }
+
+//  ===========
 //  PRIVATE METHODS
 //  ===========
     private void validateAccountCanAuthenticate(User user, SecurityAccount account) {
@@ -459,9 +478,7 @@ public class AuthServiceImpl implements AuthService {
 
     private void revokeAllRefreshTokens(User user) {
         refreshTokenRepository.findAllByUserAndRevokedFalse(user)
-                .forEach(token -> {
-                    token.setRevoked(true);
-                });
+                .forEach(token -> token.setRevoked(true));
     }
 
     private InvitationToken getValidInvitationTokenOrThrow(String rawToken) {

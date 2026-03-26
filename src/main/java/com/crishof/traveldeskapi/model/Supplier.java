@@ -39,7 +39,7 @@ public class Supplier implements Serializable {
     @Column(nullable = false, length = 120)
     private String name;
 
-    @Column(nullable = false, length = 150)
+    @Column(length = 150)
     private String email;
 
     @Column(nullable = false, length = 10)

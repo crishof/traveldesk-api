@@ -54,9 +54,7 @@ public class SupplierServiceImpl implements SupplierService {
         SupplierType supplierType = parseOptionalSupplierType(request.serviceType());
 
         String normalizedEmail = normalizeOptionalEmail(request.email());
-        if (normalizedEmail == null) {
-            normalizedEmail = generatePlaceholderEmail();
-        } else {
+        if (normalizedEmail != null) {
             validateSupplierEmailUniqueness(agencyId, normalizedEmail);
         }
 
@@ -78,12 +76,14 @@ public class SupplierServiceImpl implements SupplierService {
 
         Supplier supplier = getSupplierOrThrow(agencyId, id);
 
-        String normalizedEmail = normalizeEmail(request.email());
+        String normalizedEmail = normalizeOptionalEmail(request.email());
         String normalizedName = normalizeText(request.name());
         String normalizedPhone = normalizePhone(request.phone());
         SupplierType supplierType = parseSupplierType(request.serviceType());
 
-        validateSupplierEmailUniquenessForUpdate(agencyId, normalizedEmail, id);
+        if (normalizedEmail != null) {
+            validateSupplierEmailUniquenessForUpdate(agencyId, normalizedEmail, id);
+        }
 
         supplierMapper.updateEntityFromRequest(request, supplier);
         supplier.setName(normalizedName);
@@ -150,10 +150,6 @@ public class SupplierServiceImpl implements SupplierService {
             return SupplierType.OTHER;
         }
         return parseSupplierType(serviceType);
-    }
-
-    private String generatePlaceholderEmail() {
-        return "no-email+" + UUID.randomUUID() + "@placeholder.local";
     }
 
     private String normalizeEmail(String email) {
