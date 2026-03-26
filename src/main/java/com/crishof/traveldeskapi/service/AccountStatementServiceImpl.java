@@ -110,6 +110,37 @@ public class AccountStatementServiceImpl implements AccountStatementService {
         return getStatement(userId, request.currency());
     }
 
+    @Override
+    @Transactional
+    public AccountStatementDTO updatePayment(UUID userId, UUID paymentId, AccountPaymentRequest request) {
+        validateUserId(userId);
+        validatePaymentId(paymentId);
+        getUserOrThrow(userId);
+
+        AccountPayment payment = getPaymentOrThrow(paymentId, userId);
+        payment.setDate(request.date());
+        payment.setAmount(request.amount().setScale(2, RoundingMode.HALF_UP));
+        payment.setCurrency(request.currency());
+        payment.setDescription(normalizeDescription(request.description()));
+
+        accountPaymentRepository.save(payment);
+        return getStatement(userId, request.currency());
+    }
+
+    @Override
+    @Transactional
+    public AccountStatementDTO deletePayment(UUID userId, UUID paymentId) {
+        validateUserId(userId);
+        validatePaymentId(paymentId);
+        getUserOrThrow(userId);
+
+        AccountPayment payment = getPaymentOrThrow(paymentId, userId);
+        Currency paymentCurrency = payment.getCurrency();
+
+        accountPaymentRepository.delete(payment);
+        return getStatement(userId, paymentCurrency);
+    }
+
     private BigDecimal calculateCommissionAmount(Sale sale, Currency currency) {
         if (sale == null || sale.getCreatedBy() == null) {
             return BigDecimal.ZERO;
@@ -201,9 +232,20 @@ public class AccountStatementServiceImpl implements AccountStatementService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
     }
 
+    private AccountPayment getPaymentOrThrow(UUID paymentId, UUID userId) {
+        return accountPaymentRepository.findByIdAndUserId(paymentId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId));
+    }
+
     private void validateUserId(UUID userId) {
         if (userId == null) {
             throw new InvalidRequestException("User id is required");
+        }
+    }
+
+    private void validatePaymentId(UUID paymentId) {
+        if (paymentId == null) {
+            throw new InvalidRequestException("Payment id is required");
         }
     }
 }

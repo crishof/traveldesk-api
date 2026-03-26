@@ -12,6 +12,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/account-statement")
 @RequiredArgsConstructor
@@ -36,6 +38,27 @@ public class AccountStatementController {
             @Valid @RequestBody AccountPaymentRequest request
     ) {
         AccountStatementDTO accountStatement = accountStatementService.addPayment(securityUser.getId(), request);
+        return ResponseEntity.ok(accountStatement);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/me/payments/{paymentId}")
+    public ResponseEntity<AccountStatementDTO> updateAccountPayment(
+            @AuthenticationPrincipal SecurityUser securityUser,
+            @PathVariable UUID paymentId,
+            @Valid @RequestBody AccountPaymentRequest request
+    ) {
+        AccountStatementDTO accountStatement = accountStatementService.updatePayment(securityUser.getId(), paymentId, request);
+        return ResponseEntity.ok(accountStatement);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @DeleteMapping("/me/payments/{paymentId}")
+    public ResponseEntity<AccountStatementDTO> deleteAccountPayment(
+            @AuthenticationPrincipal SecurityUser securityUser,
+            @PathVariable UUID paymentId
+    ) {
+        AccountStatementDTO accountStatement = accountStatementService.deletePayment(securityUser.getId(), paymentId);
         return ResponseEntity.ok(accountStatement);
     }
 }

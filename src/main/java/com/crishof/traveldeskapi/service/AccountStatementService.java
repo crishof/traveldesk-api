@@ -12,4 +12,8 @@ public interface AccountStatementService {
     AccountStatementDTO getStatement(UUID userId, Currency currency);
 
     AccountStatementDTO addPayment(UUID userId, @Valid AccountPaymentRequest request);
+
+    AccountStatementDTO updatePayment(UUID userId, UUID paymentId, @Valid AccountPaymentRequest request);
+
+    AccountStatementDTO deletePayment(UUID userId, UUID paymentId);
 }
